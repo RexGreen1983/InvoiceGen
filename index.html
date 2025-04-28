@@ -550,7 +550,7 @@
                     </div>
                     <div class="form-group">
                         <label for="to-phone">Phone</label>
-                        <input type="tel" id="to-phone" placeholder="+1234567890">
+                        <input type="tel" id="to-phone" placeholder="+9876543210">
                     </div>
                 </div>
 
@@ -833,6 +833,14 @@
             // Discount and Tax
             document.getElementById('invoice-discount').addEventListener('input', calculateTotals);
             document.getElementById('invoice-tax').addEventListener('input', calculateTotals);
+
+            // Item calculations
+            document.querySelectorAll('.item-qty-input, .item-price-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    calculateItemTotal(this);
+                    calculateTotals();
+                });
+            });
         }
 
         // Add a new item row
@@ -949,6 +957,22 @@
             updatePreviewItems();
         }
 
+        // Generate PDF
+        function generatePDF() {
+            const element = document.querySelector('.invoice-preview');
+            
+            html2canvas(element).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save('invoice.pdf');
+            });
+        }
+
         // Clear the entire form
         function clearForm() {
             if (confirm('Are you sure you want to clear the entire invoice form?')) {
@@ -973,4 +997,60 @@
                 document.getElementById('to-phone').value = '';
                 
                 // Reset items (keep one empty item)
-                const itemsContainer
+                const itemsContainer = document.getElementById('items-container');
+                itemsContainer.innerHTML = '';
+                
+                // Add one empty item
+                itemCount = 1;
+                const newItemRow = document.createElement('div');
+                newItemRow.className = 'item-row';
+                newItemRow.innerHTML = `
+                    <div class="form-group item-name">
+                        <label for="item-name-1">Description</label>
+                        <input type="text" id="item-name-1" placeholder="Service or product name" class="item-name-input">
+                    </div>
+                    <div class="form-group item-qty">
+                        <label for="item-qty-1">Qty</label>
+                        <input type="number" id="item-qty-1" min="1" value="1" class="item-qty-input">
+                    </div>
+                    <div class="form-group item-price">
+                        <label for="item-price-1">Price</label>
+                        <input type="number" id="item-price-1" min="0" step="0.01" value="0" class="item-price-input">
+                    </div>
+                    <div class="form-group item-total">
+                        <label for="item-total-1">Total</label>
+                        <input type="text" id="item-total-1" value="0" readonly>
+                    </div>
+                    <button type="button" class="remove-item" onclick="removeItem(this)">×</button>
+                `;
+                itemsContainer.appendChild(newItemRow);
+                
+                // Reset notes
+                document.getElementById('invoice-notes').value = '';
+                
+                // Reset discount and tax
+                document.getElementById('invoice-discount').value = '0';
+                document.getElementById('invoice-tax').value = '0';
+                
+                // Update preview
+                document.getElementById('preview-invoice-number').textContent = 'INV-001';
+                document.getElementById('preview-date').textContent = formatDate(document.getElementById('invoice-date').value);
+                document.getElementById('preview-due-date').textContent = formatDate(document.getElementById('invoice-due-date').value);
+                document.getElementById('preview-from-name').textContent = 'Your Business Name';
+                document.getElementById('preview-from-address').innerHTML = '123 Business St<br>City, Country';
+                document.getElementById('preview-from-email').textContent = 'your@email.com';
+                document.getElementById('preview-from-phone').textContent = '+1234567890';
+                document.getElementById('preview-to-name').textContent = 'Client Name';
+                document.getElementById('preview-to-address').innerHTML = '456 Client Ave<br>City, Country';
+                document.getElementById('preview-to-email').textContent = 'client@email.com';
+                document.getElementById('preview-to-phone').textContent = '+9876543210';
+                document.getElementById('preview-notes').textContent = 'Thank you for your business!';
+                document.getElementById('preview-discount-percent').textContent = '0';
+                document.getElementById('preview-tax-percent').textContent = '0';
+                
+                calculateTotals();
+            }
+        }
+    </script>
+</body>
+</html>
