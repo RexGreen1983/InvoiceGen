@@ -957,20 +957,79 @@
             updatePreviewItems();
         }
 
-   import { PDFDocument, rgb } from 'pdf-lib';
+   function generatePDF() {
+    const element = document.querySelector('.invoice-preview');
+    const opt = {
+        scale: 3, // Triple resolution
+        dpi: 300, // Print quality DPI
+        letterRendering: true,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#FFFFFF',
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight
+    };
 
-async function generatePDF() {
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595, 842]); // A4 dimensions in points
+    // Create a clone to avoid affecting the original
+    const clone = element.cloneNode(true);
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.width = '210mm'; // A4 width
+    clone.style.padding = '20px';
+    document.body.appendChild(clone);
+
+    html2canvas(clone, opt).then(canvas => {
+        document.body.removeChild(clone);
+        
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = (canvas.height * pageWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
+        pdf.save('invoice-' + document.getElementById('invoice-number').value + '.pdf');
+    });
+}
+/* PDF-specific styles */
+@media print, (min-resolution: 300dpi) {
+    .invoice-preview {
+        width: 210mm !important;
+        min-height: 297mm !important;
+        padding: 15mm !important;
+        margin: 0 !important;
+        background: white !important;
+        box-shadow: none !important;
+    }
     
-    // Add your content programmatically
-    page.drawText('INVOICE', { x: 50, y: 800, size: 24 });
-    // ... add other elements
+    body {
+        background: white !important;
+    }
     
-    const pdfBytes = await pdfDoc.save();
-    download(pdfBytes, 'invoice.pdf', 'application/pdf');
+    /* Force crisp fonts */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        text-rendering: geometricPrecision !important;
+    }
 }
 
+/* Hide during rendering */
+.pdf-render-mode {
+    position: absolute;
+    left: -9999px;
+    width: 210mm !important;
+}
+        // Add this to your DOMContentLoaded event
+document.getElementById('invoice-currency').addEventListener('change', function() {
+    document.querySelectorAll('.text-right').forEach(el => {
+        el.style.fontFeatureSettings = '"tnum" 1'; // Tabular numbers for alignment
+    });
+});
         // Clear the entire form
         function clearForm() {
             if (confirm('Are you sure you want to clear the entire invoice form?')) {
